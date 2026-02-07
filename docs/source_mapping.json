@@ -1,0 +1,205 @@
+{
+  "description": "Maps each JSON data file to its source URL(s) and scrape method",
+  "last_updated": "2025-10-02",
+  "mappings": [
+    {
+      "file": "scholarships_and_financial_aids.json",
+      "source_urls": ["https://www.ewubd.edu/scholarships-financial-aid"],
+      "scrape_method": "static",
+      "notes": "Effective from Spring 2025 onwards"
+    },
+    {
+      "file": "admission_deadlines.json",
+      "source_urls": ["https://admission.ewubd.edu/index.php?documentid=importantdates.php"],
+      "scrape_method": "static",
+      "notes": null
+    },
+    {
+      "file": "policy.json",
+      "source_urls": ["https://www.ewubd.edu/ewu-policies"],
+      "scrape_method": "static",
+      "notes": "Full policy details in PDFs; JSON contains summaries"
+    },
+    {
+      "file": "all_available_programs.json",
+      "source_urls": [],
+      "scrape_method": "manual",
+      "notes": "Aggregated from multiple pages, not a single source"
+    },
+    {
+      "file": "depts.json",
+      "source_urls": [],
+      "scrape_method": "manual",
+      "notes": "Basic info aggregated from combined pages"
+    },
+    {
+      "file": "rules.json",
+      "source_urls": ["https://ewubd.edu/student-rules-regulation"],
+      "scrape_method": "static",
+      "notes": null
+    },
+    {
+      "file": "sexual_harassment.json",
+      "source_urls": [
+        "https://www.ewubd.edu/ewu-sexual-harassment-elimination-and-prevention-policy",
+        "https://www.ewubd.edu/storage/app/media/SHEPC/Members%20of%20SHEPC%202023.pdf"
+      ],
+      "scrape_method": "static+pdf",
+      "notes": "Committee members list is in PDF"
+    },
+    {
+      "file": "career_counseling_center.json",
+      "source_urls": ["https://ewubd.edu/career-counseling-center"],
+      "scrape_method": "static",
+      "notes": null
+    },
+    {
+      "file": "facilites.json",
+      "source_urls": [
+        "https://www.ewubd.edu/research-facilities",
+        "https://fse.ewubd.edu/computer-science-engineering/lab-facilities",
+        "https://www.ewubd.edu/crt-center-research-and-training",
+        "https://www.ewubd.edu/services-ics",
+        "https://www.ewubd.edu/campus-life"
+      ],
+      "scrape_method": "static",
+      "notes": "Data aggregated from multiple facility pages"
+    },
+    {
+      "file": "about_ewu.json",
+      "source_urls": [
+        "https://www.ewubd.edu/history",
+        "https://www.ewubd.edu/vision-mission-ewu",
+        "https://www.ewubd.edu/board-trustees"
+      ],
+      "scrape_method": "static",
+      "notes": null
+    },
+    {
+      "file": "tution_fees.json",
+      "source_urls": [
+        "https://ewubd.edu/undergraduate-tuition-fees",
+        "https://ewubd.edu/graduate-programs-tuition-fees"
+      ],
+      "scrape_method": "static",
+      "notes": "Applicable from Fall 2024 onwards"
+    },
+    {
+      "file": "events_workshops.json",
+      "source_urls": ["https://ewubd.edu/events"],
+      "scrape_method": "static",
+      "notes": "May be paginated"
+    },
+    {
+      "file": "grading.json",
+      "source_urls": ["https://www.ewubd.edu/grades-rules-and-regulations"],
+      "scrape_method": "static",
+      "notes": "Missing withdraw and retake policies"
+    },
+    {
+      "file": "admission_requirements.json",
+      "source_urls": ["https://admission.ewubd.edu/"],
+      "scrape_method": "static",
+      "notes": null
+    },
+    {
+      "file": "helpdesk.json",
+      "source_urls": ["https://www.ewubd.edu/notice-details/online-helpdesk-list-email-accounts"],
+      "scrape_method": "static",
+      "notes": null
+    },
+    {
+      "file": "clubs.json",
+      "source_urls": ["https://www.ewubd.edu/clubs"],
+      "scrape_method": "static",
+      "notes": null
+    },
+    {
+      "file": "payment_procedure.json",
+      "source_urls": ["https://www.ewubd.edu/payment-procedure"],
+      "scrape_method": "static",
+      "notes": null
+    },
+    {
+      "file": "ewu_faculty_complete.json",
+      "source_urls": ["https://www.ewubd.edu/search-faculty"],
+      "scrape_method": "ajax",
+      "notes": "Uses Select2 dropdowns and AJAX. 436 faculty members. Individual profiles at /faculty-profile/{id}. Needs Playwright or API reverse-engineering."
+    },
+    {
+      "file": "ewu_newsletters_complete.json",
+      "source_urls": ["https://www.ewubd.edu/newsletters"],
+      "scrape_method": "static",
+      "notes": null
+    },
+    {
+      "file": "ewu_partnerships.json",
+      "source_urls": [],
+      "scrape_method": "needs_research",
+      "notes": "Source URL unknown"
+    },
+    {
+      "file": "ewu_proctor_schedule.json",
+      "source_urls": [],
+      "scrape_method": "needs_research",
+      "notes": "Source URL unknown"
+    },
+    {
+      "file": "alumni.json",
+      "source_urls": [],
+      "scrape_method": "manual",
+      "notes": "Aggregated data, not from a specific page"
+    },
+    {
+      "file": "academic_council.json",
+      "source_urls": [],
+      "scrape_method": "needs_research",
+      "notes": "Source URL unknown"
+    },
+    {
+      "file": "ewu_board_of_trustees.json",
+      "source_urls": ["https://www.ewubd.edu/board-trustees"],
+      "scrape_method": "static",
+      "notes": null
+    },
+    {
+      "file": "syndicate.json",
+      "source_urls": [],
+      "scrape_method": "needs_research",
+      "notes": "Source URL unknown"
+    },
+    {
+      "file": "admission_process.json",
+      "source_urls": ["https://admission.ewubd.edu/"],
+      "scrape_method": "static",
+      "notes": null
+    }
+  ],
+  "content_gaps": [
+    {
+      "data": "Academic Calendar",
+      "url": "https://www.ewubd.edu/academic-calendar",
+      "priority": "critical",
+      "method": "static"
+    },
+    {
+      "data": "Notice Board",
+      "url": "https://www.ewubd.edu/notice-board",
+      "priority": "critical",
+      "method": "static_paginated",
+      "notes": "Server-rendered with pagination, ~24 pages"
+    },
+    {
+      "data": "News",
+      "url": "https://www.ewubd.edu/news",
+      "priority": "medium",
+      "method": "static"
+    },
+    {
+      "data": "FAQ",
+      "url": "https://www.ewubd.edu/faq",
+      "priority": "medium",
+      "method": "static"
+    }
+  ]
+}
