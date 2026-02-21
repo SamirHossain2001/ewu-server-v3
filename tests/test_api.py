@@ -256,6 +256,92 @@ class TestCampus:
         assert body["count"] >= 1
 
 
+class TestCourses:
+    def test_list_programs(self, client):
+        r = client.get("/api/courses/programs")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["count"] >= 22
+
+    def test_list_programs_undergraduate(self, client):
+        r = client.get("/api/courses/programs", params={"level": "undergraduate"})
+        assert r.status_code == 200
+        body = r.json()
+        assert body["count"] >= 14
+        for prog in body["data"]:
+            assert prog["level"] == "undergraduate"
+
+    def test_list_programs_graduate(self, client):
+        r = client.get("/api/courses/programs", params={"level": "graduate"})
+        assert r.status_code == 200
+        body = r.json()
+        assert body["count"] >= 8
+        for prog in body["data"]:
+            assert prog["level"] == "graduate"
+
+    def test_get_program_by_code(self, client):
+        listing = client.get("/api/courses/programs").json()
+        assert listing["count"] >= 1
+        real_code = listing["data"][0]["program_code"]
+
+        r = client.get(f"/api/courses/programs/{real_code}")
+        assert r.status_code == 200
+        data = r.json()["data"]
+        assert data["program_code"] == real_code
+        assert "courses" in data
+
+    def test_get_program_not_found(self, client):
+        r = client.get("/api/courses/programs/nonexistent-xyz-999")
+        assert r.status_code == 404
+
+    def test_list_courses(self, client):
+        r = client.get("/api/courses")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["count"] >= 1
+
+    def test_list_courses_filter_level(self, client):
+        r = client.get("/api/courses", params={"level": "undergraduate"})
+        assert r.status_code == 200
+        body = r.json()
+        assert body["count"] >= 1
+        for course in body["data"]:
+            assert course["level"] == "undergraduate"
+
+    def test_list_courses_filter_program(self, client):
+        listing = client.get("/api/courses/programs").json()
+        assert listing["count"] >= 1
+        real_code = listing["data"][0]["program_code"]
+
+        r = client.get("/api/courses", params={"program": real_code})
+        assert r.status_code == 200
+        body = r.json()
+        assert body["count"] >= 1
+        for course in body["data"]:
+            assert course["program_code"] == real_code
+
+    def test_list_courses_filter_type(self, client):
+        r = client.get("/api/courses", params={"course_type": "Core"})
+        assert r.status_code == 200
+        body = r.json()
+        assert "data" in body
+
+    def test_list_courses_search(self, client):
+        r = client.get("/api/courses", params={"search": "English"})
+        assert r.status_code == 200
+        body = r.json()
+        assert body["count"] >= 1
+
+    def test_list_courses_pagination(self, client):
+        r1 = client.get("/api/courses", params={"limit": 5, "offset": 0})
+        r2 = client.get("/api/courses", params={"limit": 5, "offset": 5})
+        assert r1.status_code == 200
+        assert r2.status_code == 200
+        ids1 = [c["id"] for c in r1.json()["data"]]
+        ids2 = [c["id"] for c in r2.json()["data"]]
+        assert len(set(ids1) & set(ids2)) == 0
+
+
 class TestSearch:
     def test_search(self, client):
         r = client.get("/api/search", params={"q": "computer"})

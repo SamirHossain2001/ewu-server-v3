@@ -709,6 +709,323 @@ def _transform_sexual_harassment(data: dict) -> list[dict]:
     return _make_document("sexual-harassment-policy", "Sexual Harassment Elimination Policy", data, "sexual_harassment.json")
 
 
+def _transform_course_files(file_path: Path, level: str) -> tuple[dict, list[dict]]:
+    """Transform a single course JSON file into (program_record, [course_records]).
+
+    Detection order for graduate files:
+      1. "semesters" in data  → Type D (mphil_pharmacy)
+      2. "study_tracks" + "majors" in data → Type B (ms_cse)
+      3. "sections" in data   → Type A (mba_emba, mds, ms_dsa, mss_eco, tesol)
+      4. else                 → Type C flat courses[] (ma_english)
+    """
+    data = _load_json(file_path)
+    stem = file_path.stem  # e.g. "st_cse" or "mba_emba"
+
+    if level == "undergraduate":
+        program_code = stem[3:] if stem.startswith("st_") else stem
+        dept_info = data.get("department_info", {})
+        program_name = (
+            dept_info.get("program_name")
+            or dept_info.get("department_name")
+            or program_code
+        )
+        raw_credits = dept_info.get("total_credits") or dept_info.get("minimum_credits_required")
+        try:
+            total_credits = int(raw_credits) if raw_credits is not None else None
+        except (ValueError, TypeError):
+            total_credits = None
+
+        program_record = {
+            "program_code": program_code,
+            "program_name": program_name,
+            "level": "undergraduate",
+            "total_credits": total_credits,
+            "department": dept_info.get("department_code") or dept_info.get("department"),
+            "vision": dept_info.get("vision"),
+            "mission": dept_info.get("mission"),
+            "course_summaries": data.get("course_summaries"),
+            "program_outcomes": data.get("program_outcomes"),
+            "metadata": None,
+        }
+
+        seen: set[str] = set()
+        course_records: list[dict] = []
+        for course in data.get("courses", []):
+            code = course.get("code", "")
+            if not code or code in seen:
+                continue
+            seen.add(code)
+            course_records.append({
+                "program_code": program_code,
+                "level": "undergraduate",
+                "course_code": code,
+                "course_title": course.get("name", ""),
+                "credits": course.get("credits"),
+                "prerequisites": course.get("prerequisites"),
+                "course_type": course.get("category"),
+                "section": "general",
+                "section_detail": None,
+            })
+        return program_record, course_records
+
+    # --- Graduate ---
+    program_code = stem
+
+    if "semesters" in data:
+        # Type D: mphil_pharmacy — semesters list with core/optional sublists
+        program_record = {
+            "program_code": program_code,
+            "program_name": data.get("program", program_code),
+            "level": "graduate",
+            "total_credits": None,
+            "department": None,
+            "vision": None,
+            "mission": None,
+            "course_summaries": None,
+            "program_outcomes": None,
+            "metadata": None,
+        }
+
+        seen: set[str] = set()
+        course_records = []
+        for semester in data.get("semesters", []):
+            semester_name = semester.get("semester", "")
+            for type_key, type_courses in semester.get("courses", {}).items():
+                if not isinstance(type_courses, list):
+                    continue
+                if type_key == "core_courses":
+                    ctype = "Core"
+                elif type_key == "optional_courses":
+                    ctype = "Optional"
+                else:
+                    ctype = type_key.replace("_", " ").title()
+                for course in type_courses:
+                    code = course.get("course_code", "")
+                    if not code or code in seen:
+                        continue
+                    seen.add(code)
+                    prereqs = course.get("prerequisites")
+                    if isinstance(prereqs, list):
+                        prereqs = "; ".join(prereqs)
+                    course_records.append({
+                        "program_code": program_code,
+                        "level": "graduate",
+                        "course_code": code,
+                        "course_title": course.get("course_title", ""),
+                        "credits": course.get("credits"),
+                        "prerequisites": prereqs,
+                        "course_type": ctype,
+                        "section": semester_name,
+                        "section_detail": None,
+                    })
+        return program_record, course_records
+
+    if "study_tracks" in data and "majors" in data:
+        # Type B: ms_cse — study_tracks + majors
+        raw_credits = data.get("total_credits_required") or data.get("total_credits")
+        program_record = {
+            "program_code": program_code,
+            "program_name": data.get("program", program_code),
+            "level": "graduate",
+            "total_credits": raw_credits if isinstance(raw_credits, int) else None,
+            "department": None,
+            "vision": None,
+            "mission": None,
+            "course_summaries": None,
+            "program_outcomes": None,
+            "metadata": {
+                "study_tracks": data.get("study_tracks"),
+                "major_areas": data.get("major_areas"),
+                "admission_requirements": data.get("admission_requirements"),
+                "notes": data.get("notes"),
+            },
+        }
+
+        seen: set[str] = set()
+        course_records = []
+        for major_name, major_val in data.get("majors", {}).items():
+            for sub_key, sub_val in major_val.items():
+                if not isinstance(sub_val, list):
+                    continue
+                for course in sub_val:
+                    code = course.get("code", "")
+                    if not code or code in seen:
+                        continue
+                    seen.add(code)
+                    course_records.append({
+                        "program_code": program_code,
+                        "level": "graduate",
+                        "course_code": code,
+                        "course_title": course.get("title", ""),
+                        "credits": course.get("credits"),
+                        "course_type": None,
+                        "section": major_name,
+                        "section_detail": sub_key,
+                    })
+        return program_record, course_records
+
+    if "sections" in data:
+        # Type A: mba_emba, mds, ms_dsa, mss_eco, tesol — sections dict
+        raw_credits = data.get("total_credits")
+        program_record = {
+            "program_code": program_code,
+            "program_name": data.get("program", program_code),
+            "level": "graduate",
+            "total_credits": raw_credits if isinstance(raw_credits, int) else None,
+            "department": None,
+            "vision": None,
+            "mission": None,
+            "course_summaries": None,
+            "program_outcomes": None,
+            "metadata": None,
+        }
+
+        seen: set[str] = set()
+        course_records = []
+        for section_key, section_val in data.get("sections", {}).items():
+            if not isinstance(section_val, dict):
+                continue
+            if "areas" in section_val:
+                for area_name, area_val in section_val["areas"].items():
+                    if isinstance(area_val, list):
+                        area_courses = area_val
+                    elif isinstance(area_val, dict):
+                        area_courses = area_val.get("courses", [])
+                    else:
+                        continue
+                    for course in area_courses:
+                        code = course.get("code", "")
+                        if not code or code in seen:
+                            continue
+                        seen.add(code)
+                        course_records.append({
+                            "program_code": program_code,
+                            "level": "graduate",
+                            "course_code": code,
+                            "course_title": course.get("title", ""),
+                            "credits": course.get("credits"),
+                            "description": course.get("description"),
+                            "course_type": None,
+                            "section": section_key,
+                            "section_detail": area_name,
+                        })
+            else:
+                courses = section_val.get("courses") or section_val.get("course_list", [])
+                for course in courses:
+                    code = course.get("code", "")
+                    if not code or code in seen:
+                        continue
+                    seen.add(code)
+                    course_records.append({
+                        "program_code": program_code,
+                        "level": "graduate",
+                        "course_code": code,
+                        "course_title": course.get("title", ""),
+                        "credits": course.get("credits"),
+                        "description": course.get("description"),
+                        "course_type": None,
+                        "section": section_key,
+                        "section_detail": None,
+                    })
+        return program_record, course_records
+
+    # Type C: ma_english — flat courses[] list
+    raw_credits = data.get("total_credits")
+    program_record = {
+        "program_code": program_code,
+        "program_name": data.get("program", program_code),
+        "level": "graduate",
+        "total_credits": raw_credits if isinstance(raw_credits, int) else None,
+        "department": None,
+        "vision": None,
+        "mission": None,
+        "course_summaries": None,
+        "program_outcomes": None,
+        "metadata": None,
+    }
+
+    seen: set[str] = set()
+    course_records = []
+    for course in data.get("courses", []):
+        code = course.get("course_code") or course.get("code", "")
+        if not code or code in seen:
+            continue
+        seen.add(code)
+        course_records.append({
+            "program_code": program_code,
+            "level": "graduate",
+            "course_code": code,
+            "course_title": course.get("course_title") or course.get("title", ""),
+            "credits": course.get("credits"),
+            "course_type": course.get("course_type"),
+            "section": "general",
+            "section_detail": None,
+        })
+    return program_record, course_records
+
+
+def _migrate_course_folders(db: DBManager, data_dir: Path, clean: bool = False):
+    """Migrate all course JSON files from subdirectory folders into course_programs/course_offerings."""
+    folder_level_map = [
+        ("courses_undergraduate", "undergraduate"),
+        ("courses_graduate", "graduate"),
+    ]
+
+    all_program_records: list[dict] = []
+    courses_by_program: dict[str, list[dict]] = {}
+
+    for folder_name, level in folder_level_map:
+        folder_path = data_dir / folder_name
+        if not folder_path.exists():
+            logger.warning(f"Course folder not found, skipping: {folder_path}")
+            continue
+
+        for json_file in sorted(folder_path.glob("*.json")):
+            logger.info(f"Transforming {json_file.name} [{level}]")
+            try:
+                prog_record, course_records = _transform_course_files(json_file, level)
+                all_program_records.append(prog_record)
+                courses_by_program[prog_record["program_code"]] = course_records
+            except Exception as e:
+                logger.error(f"Failed to transform {json_file.name}: {e}")
+
+    if not all_program_records:
+        logger.warning("No course program records produced — skipping course migration")
+        return
+
+    if clean:
+        logger.info("[clean] Deleting all rows from course_offerings")
+        db.delete_all("course_offerings")
+        logger.info("[clean] Deleting all rows from course_programs")
+        db.delete_all("course_programs")
+
+    # Phase 1: upsert programs
+    logger.info(f"Upserting {len(all_program_records)} course_programs")
+    ok = db.upsert("course_programs", all_program_records, on_conflict="program_code")
+    if not ok:
+        logger.error("Failed to upsert course_programs — aborting course migration")
+        return
+
+    # Phase 2: fetch IDs to populate FK on course_offerings
+    programs_in_db = db.get_all("course_programs")
+    program_id_map = {p["program_code"]: p["id"] for p in programs_in_db}
+
+    # Phase 3: attach program_id and flatten all course records
+    all_course_records: list[dict] = []
+    for program_code, records in courses_by_program.items():
+        prog_id = program_id_map.get(program_code)
+        for rec in records:
+            rec["program_id"] = prog_id
+            all_course_records.append(rec)
+
+    logger.info(f"Upserting {len(all_course_records)} course_offerings")
+    ok = db.upsert("course_offerings", all_course_records, on_conflict="program_code,course_code")
+    if ok:
+        logger.info(f"Migrated {len(all_course_records)} course offerings")
+    else:
+        logger.error("Failed to upsert course_offerings")
+
+
 TRANSFORMS = {
     "_transform_departments": _transform_departments,
     "_transform_programs": _transform_programs,
@@ -754,12 +1071,14 @@ def run_migration(clean: bool = False):
 
     if clean:
         # Collect unique tables and wipe them once each
+        # course_offerings first (FK child), then course_programs (FK parent)
         tables_to_clean = list(dict.fromkeys(
             config["table"] for config in FILE_TABLE_MAP.values()
         ))
         for table in tables_to_clean:
             logger.info(f"[clean] Deleting all rows from {table}")
             db.delete_all(table)
+        # Course tables handled separately in _migrate_course_folders
 
     for filename, config in FILE_TABLE_MAP.items():
         filepath = data_dir / filename
@@ -789,6 +1108,9 @@ def run_migration(clean: bool = False):
             logger.info(f"Migrated {len(records)} records from {filename}")
         else:
             logger.error(f"Failed to migrate {filename}")
+
+    # Migrate course folders (course_programs + course_offerings)
+    _migrate_course_folders(db, data_dir, clean=clean)
 
 
 if __name__ == "__main__":

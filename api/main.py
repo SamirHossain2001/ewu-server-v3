@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config.settings import settings
 from api.dependencies import get_api_db, APIDBManager
-from api.routes import academic, people, campus, finance, info, search
+from api.routes import academic, people, campus, finance, info, search, courses
 
 app = FastAPI(
     title="EWU Database API",
@@ -30,6 +30,7 @@ app.include_router(campus.router)
 app.include_router(finance.router)
 app.include_router(info.router)
 app.include_router(search.router)
+app.include_router(courses.router)
 
 
 @app.get("/api/health", tags=["Meta"])

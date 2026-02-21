@@ -362,3 +362,62 @@ BEGIN
     END LOOP;
 END;
 $$;
+
+-- Course Programs
+CREATE TABLE IF NOT EXISTS course_programs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    program_code TEXT NOT NULL UNIQUE,
+    program_name TEXT NOT NULL,
+    level TEXT NOT NULL CHECK (level IN ('undergraduate', 'graduate')),
+    total_credits NUMERIC(5,1),
+    department TEXT,
+    vision TEXT,
+    mission JSONB,
+    course_summaries JSONB,
+    program_outcomes JSONB,
+    metadata JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Course Offerings
+CREATE TABLE IF NOT EXISTS course_offerings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    program_id UUID REFERENCES course_programs(id) ON DELETE CASCADE,
+    program_code TEXT NOT NULL,
+    level TEXT NOT NULL CHECK (level IN ('undergraduate', 'graduate')),
+    course_code TEXT NOT NULL,
+    course_title TEXT NOT NULL,
+    credits NUMERIC(5,1),
+    description TEXT,
+    prerequisites TEXT,
+    course_type TEXT,
+    section TEXT,
+    section_detail TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_course_offerings_unique
+    ON course_offerings (program_code, course_code);
+
+CREATE INDEX IF NOT EXISTS idx_course_offerings_program_code ON course_offerings(program_code);
+CREATE INDEX IF NOT EXISTS idx_course_offerings_level ON course_offerings(level);
+CREATE INDEX IF NOT EXISTS idx_course_offerings_type ON course_offerings(course_type);
+CREATE INDEX IF NOT EXISTS idx_course_programs_level ON course_programs(level);
+
+CREATE TRIGGER update_course_programs_updated_at
+    BEFORE UPDATE ON course_programs
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER update_course_offerings_updated_at
+    BEFORE UPDATE ON course_offerings
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+ALTER TABLE course_programs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS public_read ON course_programs;
+CREATE POLICY public_read ON course_programs FOR SELECT TO anon USING (true);
+
+ALTER TABLE course_offerings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS public_read ON course_offerings;
+CREATE POLICY public_read ON course_offerings FOR SELECT TO anon USING (true);
