@@ -9,7 +9,10 @@ class AdmissionDeadlinesScraper(BaseScraper):
     name = "admission_deadlines"
 
     def get_urls(self) -> list[str]:
-        return [f"{settings.EWU_ADMISSION_URL}/index.php?documentid=importantdates.php"]
+        return [
+            f"{settings.EWU_BASE_URL}/undergraduate-dates-deadline",
+            f"{settings.EWU_BASE_URL}/graduate-dates-deadline",
+        ]
 
     def parse(self, html: str, url: str) -> list[dict]:
         soup = self.get_soup(html)
@@ -22,18 +25,17 @@ class AdmissionDeadlinesScraper(BaseScraper):
             if not rows:
                 continue
 
-            # Try to determine the level (Undergraduate/Graduate) from context
-            level = "Undergraduate"
-            prev = table.find_previous(["h2", "h3", "h4", "h5", "strong", "b"])
-            if prev:
-                prev_text = prev.get_text(strip=True).lower()
-                if "graduate" in prev_text and "undergraduate" not in prev_text:
-                    level = "Graduate"
+            # Determine level from the URL
+            level = "Undergraduate" if "undergraduate" in url else "Graduate"
 
-            # Detect semester from page content
+            # Detect semester from the admission heading (e.g. "Undergraduate Admission: Summer 2026")
             semester = ""
-            page_text = soup.get_text()
-            sem_match = re.search(r"(Spring|Summer|Fall|Winter)\s+(\d{4})", page_text, re.IGNORECASE)
+            heading = soup.find(["h2", "h3"], string=re.compile(r"Admission", re.IGNORECASE))
+            heading_text = heading.get_text(strip=True) if heading else ""
+            sem_match = re.search(r"(Spring|Summer|Fall|Winter)\s+(\d{4})", heading_text, re.IGNORECASE)
+            if not sem_match:
+                # Fallback to full page text
+                sem_match = re.search(r"(Spring|Summer|Fall|Winter)\s+(\d{4})", soup.get_text(), re.IGNORECASE)
             if sem_match:
                 semester = f"{sem_match.group(1)} {sem_match.group(2)}"
 

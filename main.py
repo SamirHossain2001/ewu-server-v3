@@ -1,9 +1,3 @@
-"""EWU Data Scraper - Main Orchestrator
-
-Runs all configured scrapers, validates data, diffs against current database,
-and upserts changes if they are within safe thresholds.
-"""
-
 import sys
 import time
 from datetime import datetime, timezone
@@ -57,7 +51,7 @@ SCRAPER_CONFIG = [
     {"scraper": ClubsScraper, "table": "clubs", "key_field": "name", "on_conflict": "name"},
     {"scraper": FacultyScraper, "table": "faculty_members", "key_field": "profile_id", "on_conflict": "profile_id"},
     {"scraper": NewslettersScraper, "table": "newsletters", "key_field": "title", "on_conflict": "title"},
-    {"scraper": AdmissionDeadlinesScraper, "table": "admission_deadlines", "key_field": "program", "on_conflict": "program,level,semester"},
+    {"scraper": AdmissionDeadlinesScraper, "table": "admission_deadlines", "key_field": "program", "on_conflict": "program,level,semester", "replace_all": True},
     {"scraper": HelpdeskScraper, "table": "helpdesk_contacts", "key_field": "email", "on_conflict": "email"},
     {"scraper": GovernanceScraper, "table": "governance_members", "key_field": "name", "on_conflict": "body,name"},
     # Document scrapers (single-record JSONB blobs, shared table)
